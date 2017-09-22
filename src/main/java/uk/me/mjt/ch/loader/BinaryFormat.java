@@ -2,6 +2,30 @@ package uk.me.mjt.ch.loader;
 
 import java.io.*;
 import java.util.*;
+
+import org.geotools.data.DataUtilities;
+import org.geotools.data.DefaultTransaction;
+import org.geotools.data.Transaction;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.data.simple.SimpleFeatureStore;
+import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.shapefile.ShapefileDataStoreFactory;
+import org.geotools.feature.DefaultFeatureCollection;
+import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.SchemaException;
+import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.geotools.geometry.jts.JTSFactoryFinder;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.FeatureType;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.Point;
+
 import uk.me.mjt.ch.AccessOnly;
 import uk.me.mjt.ch.Barrier;
 import uk.me.mjt.ch.DirectedEdge;
@@ -51,6 +75,73 @@ public class BinaryFormat {
         MapData md = new MapData(nodesById, turnRestrictions, monitor);
         md.validate(monitor);
         return md;
+    }
+    
+    public FeatureCollection writePointFeatureCollection(MapData toWrite) throws IOException{
+    	DefaultFeatureCollection features  = null;
+    	try {
+			final SimpleFeatureType TYPE = DataUtilities.createType("Location",
+			        "location:Point:srid=4326," + 
+			                "nodeId:java.lang.Long," + 
+			                "sourceData:java.lang.Long," +
+			                "contractio:Boolean," +
+			                "barrier:Boolean"
+			);
+			features = new DefaultFeatureCollection(null, TYPE);
+			GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
+			SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
+			Set<Long>nodeIDs = toWrite.getAllNodeIds();
+			for(Long nodeID : nodeIDs){
+				Node node = toWrite.getNodeById(nodeID);
+				Point point = geometryFactory.createPoint(new Coordinate(node.lon, node.lat));
+	            featureBuilder.add(point);
+	            featureBuilder.add(nodeID);
+	            featureBuilder.add(node.sourceDataNodeId);
+	            featureBuilder.add(node.contractionAllowed);
+	            featureBuilder.add(node.barrier);
+	            SimpleFeature feature = featureBuilder.buildFeature(null);
+	            features.add(feature);
+			}
+			
+		} catch (SchemaException e) {
+			e.printStackTrace();
+		}
+        
+        return features;
+    }
+    
+    public void featureCollectionToShapefile(String outShapefile,FeatureCollection inFeatures) throws IOException{
+    	Transaction transaction = new DefaultTransaction("create");
+    	try{
+	        File newFile = new File(outShapefile);
+	
+	        ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
+	
+	        Map<String, Serializable> params = new HashMap<String, Serializable>();
+	        params.put("url", newFile.toURI().toURL());
+	        params.put("create spatial index", Boolean.TRUE);
+	
+	        ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
+	       FeatureType type =  inFeatures.getSchema();
+	        newDataStore.createSchema((SimpleFeatureType) type);
+	
+	      //  CoordinateReferenceSystem crs=type.getCoordinateReferenceSystem();
+	        newDataStore.forceSchemaCRS(DefaultGeographicCRS.WGS84);
+	        
+	        
+	        String typeName = newDataStore.getTypeNames()[0];
+	        SimpleFeatureSource featureSource = newDataStore.getFeatureSource(typeName);
+	        SimpleFeatureStore featureStore = (SimpleFeatureStore) featureSource;
+	        featureStore.setTransaction(transaction);
+	        featureStore.addFeatures(inFeatures);
+            transaction.commit();
+	        
+	    }catch(IOException ioe){
+	    	ioe.printStackTrace();
+	    }finally{
+	    	transaction.close();
+	    }
+    	
     }
     
     public void write(MapData toWrite, String nodeFile, String wayFile) throws IOException {

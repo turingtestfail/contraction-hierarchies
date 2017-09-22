@@ -5,6 +5,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+
+import org.geotools.feature.FeatureCollection;
+
 import static org.junit.Assert.*;
 import uk.me.mjt.ch.AccessOnly;
 import uk.me.mjt.ch.DirectedEdge;
@@ -103,6 +106,15 @@ public class BinaryFormatTest {
         public void updateStatus(MonitoredProcess process, long completed, long total) {
             statuses.add(toString(process, completed, total));
         }
+    }
+    
+    @org.junit.Test
+    public void testWritePointsShapefile() throws IOException{
+    	BinaryFormat instance = new BinaryFormat();
+    	String filenamePrefix = "/home/bgock/data/dc-baltimore_maryland";
+    	MapData readback=instance.read(filenamePrefix+"-nodes.dat",filenamePrefix+"-ways.dat", new StdoutStatusMonitor());
+    	FeatureCollection fc = instance.writePointFeatureCollection(readback); 
+    	instance.featureCollectionToShapefile(filenamePrefix+".shp",fc);
     }
     
 }
