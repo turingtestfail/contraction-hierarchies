@@ -5,8 +5,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.geotools.feature.FeatureCollection;
+import org.opengis.feature.simple.SimpleFeature;
 
 import static org.junit.Assert.*;
 import uk.me.mjt.ch.AccessOnly;
@@ -113,7 +115,7 @@ public class BinaryFormatTest {
     	BinaryFormat instance = new BinaryFormat();
     	String filenamePrefix = "/home/bgock/data/dc-baltimore_maryland";
     	MapData readback=instance.read(filenamePrefix+"-nodes.dat",filenamePrefix+"-ways.dat", new StdoutStatusMonitor());
-    	FeatureCollection fc = instance.writePointFeatureCollection(readback); 
+    	List<SimpleFeature> fc = instance.writePointFeatureCollection(readback); 
     	instance.featureCollectionToShapefile(filenamePrefix+".shp",fc);
     }
     

@@ -6,6 +6,7 @@ import java.util.*;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultTransaction;
 import org.geotools.data.Transaction;
+import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.simple.SimpleFeatureStore;
@@ -77,28 +78,28 @@ public class BinaryFormat {
         return md;
     }
     
-    public FeatureCollection writePointFeatureCollection(MapData toWrite) throws IOException{
-    	DefaultFeatureCollection features  = null;
+    public List<SimpleFeature> writePointFeatureCollection(MapData toWrite) throws IOException{
+    	List<SimpleFeature> features = new ArrayList<>();
     	try {
 			final SimpleFeatureType TYPE = DataUtilities.createType("Location",
-			        "location:Point:srid=4326," + 
+			        "the_geom:Point:srid=4326," + 
 			                "nodeId:java.lang.Long," + 
 			                "sourceData:java.lang.Long," +
 			                "contractio:Boolean," +
 			                "barrier:Boolean"
 			);
-			features = new DefaultFeatureCollection(null, TYPE);
-			GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
+
+			GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
 			SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
 			Set<Long>nodeIDs = toWrite.getAllNodeIds();
 			for(Long nodeID : nodeIDs){
 				Node node = toWrite.getNodeById(nodeID);
-				Point point = geometryFactory.createPoint(new Coordinate(node.lon, node.lat));
+				Point point = geometryFactory.createPoint(new Coordinate(Double.valueOf(node.lon), Double.valueOf(node.lat)));
 	            featureBuilder.add(point);
 	            featureBuilder.add(nodeID);
 	            featureBuilder.add(node.sourceDataNodeId);
 	            featureBuilder.add(node.contractionAllowed);
-	            featureBuilder.add(node.barrier);
+	            featureBuilder.add(barrierToBoolean(node.barrier));
 	            SimpleFeature feature = featureBuilder.buildFeature(null);
 	            features.add(feature);
 			}
@@ -110,20 +111,29 @@ public class BinaryFormat {
         return features;
     }
     
-    public void featureCollectionToShapefile(String outShapefile,FeatureCollection inFeatures) throws IOException{
+    private Object barrierToBoolean(Barrier barrier) {
+		Boolean out = false;
+		if(barrier!=null&&barrier.equals(Barrier.TRUE)){
+			out=true;
+		}
+		
+		return out;
+	}
+
+	public void featureCollectionToShapefile(String outShapefile,List<SimpleFeature> inFeatures) throws IOException{
     	Transaction transaction = new DefaultTransaction("create");
     	try{
 	        File newFile = new File(outShapefile);
 	
 	        ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
 	
-	        Map<String, Serializable> params = new HashMap<String, Serializable>();
+	        Map<String, Serializable> params = new HashMap<>();
 	        params.put("url", newFile.toURI().toURL());
 	        params.put("create spatial index", Boolean.TRUE);
 	
 	        ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
-	       FeatureType type =  inFeatures.getSchema();
-	        newDataStore.createSchema((SimpleFeatureType) type);
+
+	        newDataStore.createSchema(inFeatures.get(0).getFeatureType());
 	
 	      //  CoordinateReferenceSystem crs=type.getCoordinateReferenceSystem();
 	        newDataStore.forceSchemaCRS(DefaultGeographicCRS.WGS84);
@@ -131,9 +141,11 @@ public class BinaryFormat {
 	        
 	        String typeName = newDataStore.getTypeNames()[0];
 	        SimpleFeatureSource featureSource = newDataStore.getFeatureSource(typeName);
+	        SimpleFeatureType SHAPE_TYPE = featureSource.getSchema();
 	        SimpleFeatureStore featureStore = (SimpleFeatureStore) featureSource;
+	        SimpleFeatureCollection collection = new ListFeatureCollection(SHAPE_TYPE, inFeatures);
 	        featureStore.setTransaction(transaction);
-	        featureStore.addFeatures(inFeatures);
+	        featureStore.addFeatures(collection);
             transaction.commit();
 	        
 	    }catch(IOException ioe){
