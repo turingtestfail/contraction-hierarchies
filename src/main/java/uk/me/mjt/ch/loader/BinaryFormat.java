@@ -25,6 +25,7 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 
 import uk.me.mjt.ch.AccessOnly;
@@ -110,10 +111,60 @@ public class BinaryFormat {
         
         return features;
     }
+    public List<SimpleFeature> writeLineFeatureCollection(MapData toWrite) throws IOException{
+    	List<SimpleFeature> features = new ArrayList<>();
+    	try {
+			final SimpleFeatureType TYPE = DataUtilities.createType("Location",
+			        "the_geom:LineString:srid=4326," + 
+			                "edgeId:java.lang.Long," + 
+			                "sourceData:java.lang.Long," +
+			                "fromNodeId:java.lang.Long," + 
+			                "toNodeId:java.lang.Long," + 
+			                "driveTimeMs:java.lang.Integer," +
+			                "accessOnly:Boolean"
+			);
+
+			GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
+			SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
+			Set<Long>nodeIDs = toWrite.getAllNodeIds();
+			for(Long nodeID : nodeIDs){
+				Node node = toWrite.getNodeById(nodeID);
+				Set<DirectedEdge>des = node.getEdgesFromAndTo();
+				for(DirectedEdge de:des){
+					Coordinate coordfrom = new Coordinate(de.from.lon,de.from.lat);
+					Coordinate coordto = new Coordinate(de.to.lon,de.to.lat);
+					Coordinate[]coords = new Coordinate[]{coordfrom,coordto};
+					LineString line = geometryFactory.createLineString(coords);
+					featureBuilder.add(line);
+					featureBuilder.add(de.edgeId);
+					featureBuilder.add(de.sourceDataEdgeId);
+					featureBuilder.add(de.from.nodeId);
+					featureBuilder.add(de.to.nodeId);
+					featureBuilder.add(de.driveTimeMs);
+					featureBuilder.add(accessToBoolean(de.accessOnly));
+					
+				}
+			}
+			
+		} catch (SchemaException e) {
+			e.printStackTrace();
+		}
+        
+        return features;
+    }
     
     private Object barrierToBoolean(Barrier barrier) {
 		Boolean out = false;
 		if(barrier!=null&&barrier.equals(Barrier.TRUE)){
+			out=true;
+		}
+		
+		return out;
+	}
+    
+    private Object accessToBoolean(AccessOnly ao) {
+		Boolean out = false;
+		if(ao!=null&&ao.equals(AccessOnly.TRUE)){
 			out=true;
 		}
 		

@@ -119,4 +119,13 @@ public class BinaryFormatTest {
     	instance.featureCollectionToShapefile(filenamePrefix+".shp",fc);
     }
     
+    @org.junit.Test
+    public void testWriteLineShapefile() throws IOException{
+    	BinaryFormat instance = new BinaryFormat();
+    	String filenamePrefix = "/home/bgock/data/dc-baltimore_maryland";
+    	MapData readback=instance.read(filenamePrefix+"-nodes.dat",filenamePrefix+"-ways.dat", new StdoutStatusMonitor());
+    	List<SimpleFeature> fc = instance.writeLineFeatureCollection(readback); 
+    	instance.featureCollectionToShapefile(filenamePrefix+"_line.shp",fc);
+    }
+    
 }
