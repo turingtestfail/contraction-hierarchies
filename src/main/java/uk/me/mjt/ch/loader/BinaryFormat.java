@@ -111,7 +111,58 @@ public class BinaryFormat {
         
         return features;
     }
-    public List<SimpleFeature> writeLineFeatureCollection(MapData toWrite) throws IOException{
+    
+    public List<SimpleFeature> writeLineFeatureCollection(MapData toWrite) throws IOException, SchemaException{
+    	HashSet<Long> writtenEdges = new HashSet();
+		final SimpleFeatureType TYPE = DataUtilities.createType("Location",
+		        "the_geom:LineString:srid=4326," + 
+		                "edgeId:java.lang.Long," + 
+		                "sourceData:java.lang.Long," +
+		                "fromNodeId:java.lang.Long," + 
+		                "toNodeId:java.lang.Long," + 
+		                "driveTimeM:java.lang.Integer," +
+		                "accessOnly:Boolean"
+		);
+		
+		GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
+		SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
+		
+    	List<SimpleFeature> features = new ArrayList<>();
+        for (Node n : toWrite.getAllNodes()) {
+            for (DirectedEdge de : n.edgesFrom) {
+                writeEdgeFeaturesRecursively(de, geometryFactory,featureBuilder,writtenEdges, features);
+            }
+        }
+        
+        return features;
+    }
+    
+    private void writeEdgeFeaturesRecursively(DirectedEdge de, GeometryFactory geometryFactory,SimpleFeatureBuilder featureBuilder,HashSet<Long> alreadyWritten, List<SimpleFeature> features) throws IOException {
+        if (de==null || alreadyWritten.contains(de.edgeId)) {
+            return;
+        }
+        
+        writeEdgeFeaturesRecursively(de.first,geometryFactory,featureBuilder,alreadyWritten,features);
+        writeEdgeFeaturesRecursively(de.second,geometryFactory,featureBuilder,alreadyWritten,features);
+			
+		Coordinate coordfrom = new Coordinate(de.from.lon,de.from.lat);
+		Coordinate coordto = new Coordinate(de.to.lon,de.to.lat);
+		Coordinate[]coords = new Coordinate[]{coordfrom,coordto};
+		LineString line = geometryFactory.createLineString(coords);
+		featureBuilder.add(line);
+		featureBuilder.add(de.edgeId);
+		featureBuilder.add(de.sourceDataEdgeId);
+		featureBuilder.add(de.from.nodeId);
+		featureBuilder.add(de.to.nodeId);
+		featureBuilder.add(de.driveTimeMs);
+		featureBuilder.add(accessToBoolean(de.accessOnly));
+		SimpleFeature feature = featureBuilder.buildFeature(null);
+        features.add(feature);
+
+        
+        alreadyWritten.add(de.edgeId);
+    }
+/*    public List<SimpleFeature> writeLineFeatureCollection(MapData toWrite) throws IOException{
     	List<SimpleFeature> features = new ArrayList<>();
     	try {
 			final SimpleFeatureType TYPE = DataUtilities.createType("Location",
@@ -120,7 +171,7 @@ public class BinaryFormat {
 			                "sourceData:java.lang.Long," +
 			                "fromNodeId:java.lang.Long," + 
 			                "toNodeId:java.lang.Long," + 
-			                "driveTimeMs:java.lang.Integer," +
+			                "driveTimeM:java.lang.Integer," +
 			                "accessOnly:Boolean"
 			);
 
@@ -142,6 +193,8 @@ public class BinaryFormat {
 					featureBuilder.add(de.to.nodeId);
 					featureBuilder.add(de.driveTimeMs);
 					featureBuilder.add(accessToBoolean(de.accessOnly));
+					SimpleFeature feature = featureBuilder.buildFeature(null);
+		            features.add(feature);
 					
 				}
 			}
@@ -152,7 +205,7 @@ public class BinaryFormat {
         
         return features;
     }
-    
+    */
     private Object barrierToBoolean(Barrier barrier) {
 		Boolean out = false;
 		if(barrier!=null&&barrier.equals(Barrier.TRUE)){
