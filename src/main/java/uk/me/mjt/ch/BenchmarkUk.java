@@ -18,10 +18,11 @@ public class BenchmarkUk {
     public void loadAndCheckMapData() throws IOException {
         long startTime = System.currentTimeMillis();
         
-        boolean loadedOk = attemptToLoad("great-britain-new-contracted-nodes.dat","great-britain-new-contracted-ways.dat");
+       // boolean loadedOk = attemptToLoad("great-britain-new-contracted-nodes.dat","great-britain-new-contracted-ways.dat");
+        boolean loadedOk = attemptToLoad("dc-baltimore_maryland-contracted-nodes.dat","dc-baltimore_maryland-contracted-ways.dat");
         if (!loadedOk) {
-            loadedOk = attemptToLoad("/home/mtandy/Documents/contraction hierarchies/binary-test/great-britain-new-contracted-nodes.dat",
-                    "/home/mtandy/Documents/contraction hierarchies/binary-test/great-britain-new-contracted-ways.dat");
+            loadedOk = attemptToLoad("/home/bgock/data/dc-baltimore_maryland-contracted-nodes.dat",
+                    "/home/bgock/data/dc-baltimore_maryland-contracted-ways.dat");
         }
         if (!loadedOk) {
             System.out.println("Couldn't find the map data to test with?");

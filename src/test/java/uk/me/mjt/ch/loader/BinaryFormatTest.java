@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.SchemaException;
 import org.opengis.feature.simple.SimpleFeature;
 
 import static org.junit.Assert.*;
@@ -120,7 +121,7 @@ public class BinaryFormatTest {
     }
     
     @org.junit.Test
-    public void testWriteLineShapefile() throws IOException{
+    public void testWriteLineShapefile() throws IOException, SchemaException{
     	BinaryFormat instance = new BinaryFormat();
     	String filenamePrefix = "/home/bgock/data/dc-baltimore_maryland";
     	MapData readback=instance.read(filenamePrefix+"-nodes.dat",filenamePrefix+"-ways.dat", new StdoutStatusMonitor());

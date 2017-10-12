@@ -14,8 +14,10 @@ public class ContractAndSerialiseUk {
             filenamePrefix = args[1];
             startNodeId = Long.parseLong(args[2]);
         } else {
-            filenamePrefix = "/home/mtandy/Documents/contraction hierarchies/binary-test/great-britain";
-            startNodeId = 253199386L; // Hatfield
+            //filenamePrefix = "/home/mtandy/Documents/contraction hierarchies/binary-test/great-britain";
+        	filenamePrefix = "/home/bgock/data/dc-baltimore_maryland";
+            //startNodeId = 253199386L; // Hatfield
+        	startNodeId = 64078646L;
         }
         
         try {
